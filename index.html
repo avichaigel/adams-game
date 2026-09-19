@@ -510,12 +510,11 @@ function gameLoop() {
 
         // Spawn monsters
         spawnTimer++;
-        if (spawnTimer >= spawnRate) {
+        if (spawnTimer >= spawnRate && monsters.length < 10) {
             spawnTimer = 0;
-            spawnRate = Math.max(38, 110 - score * 0.4);
+            spawnRate = Math.max(70, 120 - score * 0.2);
             spawnMonster();
-            if (score > 80 && Math.random() < 0.35) spawnMonster();
-            if (score > 200 && Math.random() < 0.25) spawnMonster();
+            if (score > 150 && monsters.length < 10 && Math.random() < 0.3) spawnMonster();
         }
 
         // Move monsters toward player
