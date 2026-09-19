@@ -87,9 +87,15 @@ canvas.height = H;
 
 // ---- STATE ----
 let gameState = 'playing';
+let gamePaused = false;
 let score = 0;
 let frameCount = 0;
 let screenShake = 0;
+
+// tap detection
+let touchStartTime = 0;
+let touchStartX = 0;
+let touchStartY = 0;
 
 // ---- PLAYER ----
 const player = {
@@ -136,6 +142,10 @@ const joystick = {
 canvas.addEventListener('touchstart', e => {
     e.preventDefault();
     if (gameState === 'gameover') { restartGame(); return; }
+    const t0 = e.changedTouches[0];
+    touchStartTime = Date.now();
+    touchStartX = t0.clientX;
+    touchStartY = t0.clientY;
     for (const t of e.changedTouches) {
         if (!joystick.active) {
             const r = canvas.getBoundingClientRect();
@@ -162,6 +172,15 @@ canvas.addEventListener('touchmove', e => {
 
 canvas.addEventListener('touchend', e => {
     e.preventDefault();
+    const t0 = e.changedTouches[0];
+    const duration = Date.now() - touchStartTime;
+    const moved = Math.hypot(t0.clientX - touchStartX, t0.clientY - touchStartY);
+    if (gameState === 'playing' && duration < 200 && moved < 15) {
+        gamePaused = !gamePaused;
+        joystick.active = false;
+        player.dx = 0; player.dy = 0;
+        return;
+    }
     for (const t of e.changedTouches) {
         if (t.identifier === joystick.touchId) {
             joystick.active = false;
@@ -171,7 +190,10 @@ canvas.addEventListener('touchend', e => {
 }, { passive: false });
 
 const keys = {};
-document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (e.key === 'Escape' && gameState === 'playing') gamePaused = !gamePaused;
+});
 document.addEventListener('keyup', e => keys[e.key] = false);
 canvas.addEventListener('click', () => { if (gameState === 'gameover') restartGame(); });
 
@@ -550,6 +572,30 @@ function drawJoystick() {
     ctx.restore();
 }
 
+function drawPause() {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H);
+
+    const pw = W*0.72, ph = H*0.3;
+    const px = (W-pw)/2, py = (H-ph)/2;
+    ctx.fillStyle = '#16213e';
+    ctx.strokeStyle = '#f39c12';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(px, py, pw, ph, 22);
+    ctx.fill(); ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#000'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.floor(W*0.1)}px Arial Black, Arial`;
+    ctx.fillText('⏸ השהה', W/2, py + ph*0.48);
+    ctx.fillStyle = '#f39c12';
+    ctx.font = `${Math.floor(W*0.05)}px Arial`;
+    ctx.fillText('לחץ להמשיך', W/2, py + ph*0.78);
+    ctx.shadowBlur = 0;
+}
+
 function drawGameOver() {
     ctx.fillStyle = 'rgba(0,0,0,0.72)';
     ctx.fillRect(0, 0, W, H);
@@ -583,6 +629,7 @@ function drawGameOver() {
 // ---- RESTART ----
 function restartGame() {
     gameState = 'playing';
+    gamePaused = false;
     score = 0;
     player.x = W/2; player.y = H/2;
     player.health = 5; player.invincible = 0;
@@ -607,6 +654,16 @@ function gameLoop() {
     }
     ctx.save();
     ctx.translate(sx, sy);
+
+    if (gameState === 'playing' && gamePaused) {
+        drawBG(); drawRocks(); drawParticles();
+        fireballs.forEach(drawFireball);
+        monsters.forEach(drawMonster);
+        drawPlayer(); drawPause();
+        ctx.restore();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
 
     if (gameState === 'playing') {
 
