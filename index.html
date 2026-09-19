@@ -71,7 +71,7 @@ let fireballs = [];
 let shootCooldown = 0;
 let burstCount = 0;
 let burstTimer = 0;
-const SHOOT_RATE = 38;
+const SHOOT_RATE = 65;
 
 // ---- MONSTERS ----
 let monsters = [];
@@ -149,8 +149,8 @@ function spawnMonster() {
         x, y,
         r: 18 + lvl * 2.5,
         speed: 0.7 + lvl * 0.28,
-        health: 2,
-        maxHealth: 2,
+        health: lvl + 2,
+        maxHealth: lvl + 2,
         wobble: Math.random() * Math.PI * 2,
         color: `hsl(${120 + lvl * 20}, 80%, 45%)`
     });
