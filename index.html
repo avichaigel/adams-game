@@ -69,6 +69,8 @@ const player = {
 // ---- FIREBALLS ----
 let fireballs = [];
 let shootCooldown = 0;
+let burstCount = 0;
+let burstTimer = 0;
 const SHOOT_RATE = 38;
 
 // ---- MONSTERS ----
@@ -447,7 +449,7 @@ function restartGame() {
     player.health = 5; player.invincible = 0;
     player.dx = 0; player.dy = 0;
     monsters = []; fireballs = []; particles = [];
-    spawnTimer = 0; spawnRate = 110; shootCooldown = 0;
+    spawnTimer = 0; spawnRate = 110; shootCooldown = 0; burstCount = 0; burstTimer = 0;
     document.getElementById('health').textContent = '5';
     document.getElementById('score').textContent = '0';
 }
@@ -485,9 +487,18 @@ function gameLoop() {
         player.y = Math.max(player.r, Math.min(H - player.r, player.y + player.dy));
 
         // Auto shoot at nearest monster
+        if (burstCount > 0) {
+            burstTimer--;
+            if (burstTimer <= 0 && monsters.length > 0) {
+                shoot();
+                burstCount--;
+                burstTimer = 10;
+            }
+        }
         shootCooldown--;
-        if (shootCooldown <= 0 && monsters.length > 0) {
-            shoot();
+        if (shootCooldown <= 0 && monsters.length > 0 && burstCount === 0) {
+            burstCount = 3;
+            burstTimer = 0;
             shootCooldown = SHOOT_RATE;
         }
 
