@@ -1,5 +1,97 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Background -->
   <rect width="192" height="192" rx="40" fill="#1a0a2e"/>
-  <rect x="2" y="2" width="188" height="188" rx="38" fill="none" stroke="#8800ff" stroke-width="5"/>
-  <text x="96" y="140" font-size="110" text-anchor="middle">🧙</text>
+  <rect x="2" y="2" width="188" height="188" rx="38" fill="none" stroke="#8800ff" stroke-width="4"/>
+
+  <!-- ══════════ WIZARD (left) ══════════ -->
+  <!-- Robe -->
+  <polygon points="46,108 18,180 74,180" fill="#3300aa"/>
+  <polygon points="46,108 38,145 54,145" fill="#5500dd"/>
+
+  <!-- Hat -->
+  <polygon points="46,8 18,70 74,70" fill="#3300aa"/>
+  <polygon points="46,8 22,64 70,64" fill="#5500dd"/>
+  <!-- Hat brim -->
+  <ellipse cx="46" cy="70" rx="30" ry="7" fill="#3300aa"/>
+  <!-- Hat star -->
+  <polygon points="46,28 48,36 56,36 50,40 52,48 46,44 40,48 42,40 36,36 44,36" fill="#ffcc00"/>
+
+  <!-- Face -->
+  <circle cx="46" cy="90" r="19" fill="#f0c07a"/>
+  <!-- Angry eyebrows (furrowed inward) -->
+  <line x1="31" y1="79" x2="44" y2="84" stroke="#5a2a00" stroke-width="4" stroke-linecap="round"/>
+  <line x1="48" y1="84" x2="61" y2="79" stroke="#5a2a00" stroke-width="4" stroke-linecap="round"/>
+  <!-- Eyes (red, angry) -->
+  <ellipse cx="38" cy="89" rx="5" ry="4" fill="#ffbbbb"/>
+  <ellipse cx="54" cy="89" rx="5" ry="4" fill="#ffbbbb"/>
+  <circle cx="38" cy="89" r="3" fill="#cc0000"/>
+  <circle cx="54" cy="89" r="3" fill="#cc0000"/>
+  <circle cx="37" cy="88" r="1.2" fill="#000"/>
+  <circle cx="53" cy="88" r="1.2" fill="#000"/>
+  <!-- Angry grimace (bared teeth) -->
+  <path d="M 33 99 Q 46 108 59 99 Q 46 94 33 99" fill="#880000"/>
+  <line x1="38" y1="99" x2="38" y2="104" stroke="#fff" stroke-width="2.5"/>
+  <line x1="43" y1="100" x2="43" y2="105" stroke="#fff" stroke-width="2.5"/>
+  <line x1="49" y1="100" x2="49" y2="105" stroke="#fff" stroke-width="2.5"/>
+  <line x1="54" y1="99" x2="54" y2="104" stroke="#fff" stroke-width="2.5"/>
+  <!-- Beard -->
+  <ellipse cx="46" cy="109" rx="16" ry="9" fill="#cccccc"/>
+
+  <!-- Staff (pointing toward monster) -->
+  <line x1="68" y1="116" x2="90" y2="82" stroke="#6b3a1f" stroke-width="5" stroke-linecap="round"/>
+  <!-- Magic orb -->
+  <circle cx="91" cy="80" r="10" fill="#1133ff" opacity="0.85"/>
+  <circle cx="91" cy="80" r="7" fill="#5588ff"/>
+  <circle cx="88" cy="77" r="2.5" fill="#fff" opacity="0.9"/>
+
+  <!-- ══════════ MONSTER (right) ══════════ -->
+  <!-- Head -->
+  <circle cx="148" cy="106" r="34" fill="#1e7a00"/>
+  <ellipse cx="140" cy="94" rx="21" ry="13" fill="#2aaa00" opacity="0.4"/>
+  <!-- Horns -->
+  <polygon points="132,74 124,44 143,70" fill="#0c3a00"/>
+  <polygon points="162,72 171,43 155,68" fill="#0c3a00"/>
+  <!-- Angry eyebrows (furrowed inward) -->
+  <line x1="126" y1="86" x2="141" y2="93" stroke="#0a2200" stroke-width="5" stroke-linecap="round"/>
+  <line x1="154" y1="93" x2="169" y2="86" stroke="#0a2200" stroke-width="5" stroke-linecap="round"/>
+  <!-- Eyes (white sclera + red iris) -->
+  <ellipse cx="135" cy="99" rx="9" ry="8" fill="#ffffff"/>
+  <ellipse cx="159" cy="99" rx="9" ry="8" fill="#ffffff"/>
+  <circle cx="132" cy="99" r="6" fill="#ff0000"/>
+  <circle cx="156" cy="99" r="6" fill="#ff0000"/>
+  <circle cx="130" cy="97" r="3" fill="#000"/>
+  <circle cx="154" cy="97" r="3" fill="#000"/>
+  <circle cx="129" cy="96" r="1.3" fill="#fff"/>
+  <circle cx="153" cy="96" r="1.3" fill="#fff"/>
+  <!-- Open roaring mouth -->
+  <path d="M 118 120 Q 148 148 178 120 L 178 134 Q 148 164 118 134 Z" fill="#880000"/>
+  <!-- Tongue -->
+  <ellipse cx="148" cy="142" rx="14" ry="9" fill="#ff1144"/>
+  <!-- Top fangs -->
+  <polygon points="121,120 124,137 128,120" fill="#ffffff"/>
+  <polygon points="133,122 136,141 140,122" fill="#ffffff"/>
+  <polygon points="144,123 147,143 151,123" fill="#ffffff"/>
+  <polygon points="157,122 161,141 165,122" fill="#ffffff"/>
+  <polygon points="167,120 170,137 174,120" fill="#ffffff"/>
+  <!-- Bottom fangs -->
+  <polygon points="128,133 131,120 134,133" fill="#ffe0e0"/>
+  <polygon points="145,136 148,121 151,136" fill="#ffe0e0"/>
+  <polygon points="163,133 166,120 169,133" fill="#ffe0e0"/>
+
+  <!-- ══════════ CLASH EXPLOSION (center, on top) ══════════ -->
+  <!-- Outer starburst rays -->
+  <polygon points="96,90 90,57 102,57" fill="#ffee00"/>
+  <polygon points="96,90 121,70 128,84" fill="#ffee00"/>
+  <polygon points="96,90 128,88 126,103" fill="#ffee00"/>
+  <polygon points="96,90 118,114 104,122" fill="#ffee00"/>
+  <polygon points="96,90 94,124 79,123" fill="#ffee00"/>
+  <polygon points="96,90 70,114 63,99" fill="#ffee00"/>
+  <polygon points="96,90 64,90 66,75" fill="#ffee00"/>
+  <polygon points="96,90 73,68 87,58" fill="#ffee00"/>
+  <!-- Orange glow -->
+  <circle cx="96" cy="90" r="19" fill="#ff8800"/>
+  <!-- Hot yellow center -->
+  <circle cx="96" cy="90" r="13" fill="#ffee00"/>
+  <!-- White-hot core -->
+  <circle cx="96" cy="90" r="8" fill="#ffffff"/>
 </svg>
