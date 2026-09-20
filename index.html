@@ -192,7 +192,14 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('keyup', e => keys[e.key] = false);
 canvas.addEventListener('click', (e) => {
-    if (gameState === 'gameover') restartGame();
+    if (gameState === 'gameover') {
+        const rect = canvas.getBoundingClientRect();
+        const cx = e.clientX - rect.left;
+        const cy = e.clientY - rect.top;
+        if (hitBtn(gameOverBtns.menu, cx, cy)) { gameState = 'menu'; return; }
+        restartGame();
+        return;
+    }
     if (gameState === 'menu' || gameState === 'menuScores') handleMenuClick(e);
 });
 canvas.addEventListener('mousedown', () => { if (gameState === 'playing' && !gamePaused) shootHeld = true; });
