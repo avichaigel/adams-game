@@ -46,6 +46,18 @@
     </div>
     <canvas id="gameCanvas"></canvas>
 
+<div id="nameOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.82); z-index:100; align-items:center; justify-content:center;">
+    <div style="background:#2a0060; border:2px solid #aa44ff; border-radius:16px; padding:28px 24px; text-align:center; direction:rtl; max-width:300px; width:88%;">
+        <div style="font-size:26px; font-weight:bold; color:#ffdd00; margin-bottom:6px;">🏆 שיא!</div>
+        <div id="nameScoreDisplay" style="font-size:20px; color:#ffffff; margin-bottom:16px;"></div>
+        <div style="font-size:15px; color:#ddccff; margin-bottom:8px;">הכנס את שמך:</div>
+        <input id="nameInput" type="text" maxlength="12" autocomplete="off"
+            style="font-size:20px; padding:8px 12px; border-radius:8px; border:2px solid #8800ff; background:#0d0020; color:#ffffff; width:100%; text-align:center; direction:rtl; outline:none; margin-bottom:12px;" placeholder="שמך...">
+        <button id="nameSubmit"
+            style="font-size:18px; font-weight:bold; padding:10px 0; background:#8800ff; color:#ffffff; border:none; border-radius:10px; cursor:pointer; width:100%; touch-action:manipulation;">אישור ✓</button>
+    </div>
+</div>
+
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -57,7 +69,7 @@ canvas.width = W;
 canvas.height = H;
 
 // ---- GAME STATE ----
-let gameState = 'playing';
+let gameState = 'menu';
 let gamePaused = false;
 let score = 0;
 let frameCount = 0;
@@ -101,6 +113,8 @@ const joystick = {
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (gameState === 'gameover') { restartGame(); return; }
+    if (gameState === 'naming') { return; }
+    if (gameState === 'menu' || gameState === 'menuScores') { handleMenuTouch(e.changedTouches[0]); return; }
     const t0 = e.changedTouches[0];
     touchStartTime = Date.now();
     touchStartX = t0.clientX;
@@ -158,10 +172,16 @@ const keys = {};
 document.addEventListener('keydown', e => {
     keys[e.key] = true;
     if (e.key === 'Escape' && gameState === 'playing') gamePaused = !gamePaused;
+    if (e.key === 'Escape' && gameState === 'menuScores') gameState = 'menu';
+    if (e.key === 'Enter' && gameState === 'menu') restartGame();
+    if ((e.key === 'm' || e.key === 'M') && gameState === 'gameover') gameState = 'menu';
     if (e.key === ' ') e.preventDefault();
 });
 document.addEventListener('keyup', e => keys[e.key] = false);
-canvas.addEventListener('click', () => { if (gameState === 'gameover') restartGame(); });
+canvas.addEventListener('click', (e) => {
+    if (gameState === 'gameover') restartGame();
+    if (gameState === 'menu' || gameState === 'menuScores') handleMenuClick(e);
+});
 canvas.addEventListener('mousedown', () => { if (gameState === 'playing' && !gamePaused) shootHeld = true; });
 canvas.addEventListener('mouseup', () => { shootHeld = false; });
 
@@ -472,6 +492,132 @@ function drawBackground() {
     ctx.strokeRect(2, 2, W - 4, H - 4);
 }
 
+// ---- MENU SCREEN ----
+const menuButtons = {
+    play: { label: '▶ שחק!', color: '#8800ff', hover: '#aa22ff' },
+    scores: { label: '🏆 טבלת שיאים', color: '#005599', hover: '#0077cc' }
+};
+
+function getMenuButtonRect(idx) {
+    const bw = W * 0.64, bh = H * 0.09;
+    const bx = (W - bw) / 2;
+    const by = H * 0.52 + idx * (bh + H * 0.035);
+    return { x: bx, y: by, w: bw, h: bh };
+}
+
+function drawMenu() {
+    drawBackground();
+    ctx.textAlign = 'center';
+
+    // Title
+    ctx.font = `bold ${Math.floor(W * 0.1)}px Arial`;
+    ctx.fillStyle = '#ffdd00';
+    ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 18;
+    ctx.fillText('קוסם נגד', W / 2, H * 0.2);
+    ctx.fillText('מפלצות!', W / 2, H * 0.31);
+    ctx.shadowBlur = 0;
+
+    // Wizard preview
+    drawWizard(W / 2, H * 0.42, 30);
+
+    // Buttons
+    const keys = Object.keys(menuButtons);
+    keys.forEach((key, idx) => {
+        const r = getMenuButtonRect(idx);
+        ctx.fillStyle = menuButtons[key].color;
+        ctx.beginPath();
+        ctx.roundRect(r.x, r.y, r.w, r.h, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff44';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.font = `bold ${Math.floor(W * 0.063)}px Arial`;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(menuButtons[key].label, W / 2, r.y + r.h * 0.65);
+    });
+}
+
+function drawMenuLeaderboard() {
+    drawBackground();
+    ctx.textAlign = 'center';
+
+    ctx.font = `bold ${Math.floor(W * 0.08)}px Arial`;
+    ctx.fillStyle = '#ffdd00';
+    ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 10;
+    ctx.fillText('🏆 טבלת שיאים', W / 2, H * 0.1);
+    ctx.shadowBlur = 0;
+
+    const panelW = W * 0.82, panelH = H * 0.62;
+    const panelX = (W - panelW) / 2, panelY = H * 0.15;
+    ctx.fillStyle = 'rgba(80,0,160,0.55)';
+    ctx.strokeStyle = '#aa44ff'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(panelX, panelY, panelW, panelH, 12);
+    ctx.fill(); ctx.stroke();
+
+    const lb = loadLeaderboard();
+    const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+    const entryH = panelH * 0.155;
+    for (let i = 0; i < Math.min(lb.length, 5); i++) {
+        const ey = panelY + panelH * 0.2 + i * entryH;
+        ctx.font = `${Math.floor(W * 0.05)}px Arial`;
+        ctx.fillStyle = '#ddccff';
+        const nameText = lb[i].name ? `${lb[i].name}  ` : '';
+        ctx.fillText(`${medals[i]}  ${nameText}${lb[i].score}`, W / 2, ey);
+    }
+    if (lb.length === 0) {
+        ctx.font = `${Math.floor(W * 0.05)}px Arial`;
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText('אין שיאים עדיין', W / 2, panelY + panelH * 0.5);
+    }
+
+    // Back button
+    const br = getMenuButtonRect(0);
+    const backY = panelY + panelH + H * 0.035;
+    ctx.fillStyle = '#440088';
+    ctx.beginPath();
+    ctx.roundRect(br.x, backY, br.w, br.h, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff44'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.font = `bold ${Math.floor(W * 0.063)}px Arial`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('◀ חזרה', W / 2, backY + br.h * 0.65);
+}
+
+function handleMenuClick(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    handleMenuPoint(cx, cy);
+}
+
+function handleMenuTouch(touch) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = touch.clientX - rect.left;
+    const cy = touch.clientY - rect.top;
+    handleMenuPoint(cx, cy);
+}
+
+function handleMenuPoint(cx, cy) {
+    if (gameState === 'menu') {
+        const playR = getMenuButtonRect(0);
+        const scoresR = getMenuButtonRect(1);
+        if (cx >= playR.x && cx <= playR.x + playR.w && cy >= playR.y && cy <= playR.y + playR.h) {
+            restartGame();
+        } else if (cx >= scoresR.x && cx <= scoresR.x + scoresR.w && cy >= scoresR.y && cy <= scoresR.y + scoresR.h) {
+            gameState = 'menuScores';
+        }
+    } else if (gameState === 'menuScores') {
+        const br = getMenuButtonRect(0);
+        const lb = loadLeaderboard();
+        const panelH = H * 0.62, panelY = H * 0.15;
+        const backY = panelY + panelH + H * 0.035;
+        if (cx >= br.x && cx <= br.x + br.w && cy >= backY && cy <= backY + br.h) {
+            gameState = 'menu';
+        }
+    }
+}
+
 // ---- PAUSE SCREEN ----
 function drawPause() {
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
@@ -533,10 +679,11 @@ function drawGameOver() {
     const entryH = panelH * 0.155;
     for (let i = 0; i < Math.min(lb.length, 5); i++) {
         const ey = panelY + panelH * 0.24 + i * entryH;
-        const isMe = (lb[i] === score && !lb.slice(0, i).includes(score));
-        ctx.font = `${isMe ? 'bold ' : ''}${Math.floor(W * 0.053)}px Arial`;
+        const isMe = (lb[i].score === score && !lb.slice(0, i).some(e => e.score === score));
+        ctx.font = `${isMe ? 'bold ' : ''}${Math.floor(W * 0.048)}px Arial`;
         ctx.fillStyle = isMe ? '#00ffcc' : '#ddccff';
-        ctx.fillText(`${medals[i]}  ${lb[i]}`, W / 2, ey);
+        const nameText = lb[i].name ? `${lb[i].name}  ` : '';
+        ctx.fillText(`${medals[i]}  ${nameText}${lb[i].score}`, W / 2, ey);
     }
     if (lb.length === 0) {
         ctx.font = `${Math.floor(W * 0.05)}px Arial`;
@@ -546,27 +693,51 @@ function drawGameOver() {
 
     ctx.font = `bold ${Math.floor(W * 0.052)}px Arial`;
     ctx.fillStyle = '#ffdd00';
-    ctx.fillText('לחץ כדי לנסות שוב!', W / 2, H * 0.9);
+    ctx.fillText('לחץ כדי לנסות שוב! | תפריט: M', W / 2, H * 0.9);
 }
 
 // ---- LEADERBOARD ----
 function loadLeaderboard() {
-    try { return JSON.parse(localStorage.getItem('leaderboard') || '[]'); }
+    try {
+        const data = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+        return data.map(e => typeof e === 'number' ? { score: e, name: '???' } : e);
+    }
     catch { return []; }
 }
 
-function saveScore(s) {
+function saveScore(s, name) {
     const lb = loadLeaderboard();
-    lb.push(s);
-    lb.sort((a, b) => b - a);
+    lb.push({ score: s, name: name || 'אנונימי' });
+    lb.sort((a, b) => b.score - a.score);
     lb.splice(5);
     localStorage.setItem('leaderboard', JSON.stringify(lb));
 }
 
 let scoreWasSaved = false;
 
+function showNameOverlay() {
+    const overlay = document.getElementById('nameOverlay');
+    document.getElementById('nameScoreDisplay').textContent = `ניקוד: ${score}`;
+    document.getElementById('nameInput').value = '';
+    overlay.style.display = 'flex';
+    setTimeout(() => document.getElementById('nameInput').focus(), 100);
+}
+
+function submitName() {
+    const name = document.getElementById('nameInput').value.trim() || 'אנונימי';
+    saveScore(score, name);
+    document.getElementById('nameOverlay').style.display = 'none';
+    gameState = 'gameover';
+}
+
+document.getElementById('nameSubmit').addEventListener('click', submitName);
+document.getElementById('nameInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitName();
+});
+
 // ---- RESTART ----
 function restartGame() {
+    document.getElementById('nameOverlay').style.display = 'none';
     gameState = 'playing';
     gamePaused = false;
     score = 0;
@@ -583,6 +754,18 @@ function restartGame() {
 // ---- MAIN LOOP ----
 function gameLoop() {
     frameCount++;
+
+    if (gameState === 'menu') {
+        drawMenu();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    if (gameState === 'menuScores') {
+        drawMenuLeaderboard();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
 
     if (gameState === 'playing' && gamePaused) {
         drawBackground();
@@ -681,7 +864,7 @@ function gameLoop() {
                     player.health--;
                     player.invincible = 65;
                     document.getElementById('health').textContent = player.health;
-                    if (player.health <= 0) { gameState = 'gameover'; if (!scoreWasSaved) { saveScore(score); scoreWasSaved = true; } }
+                    if (player.health <= 0) { gameState = 'naming'; if (!scoreWasSaved) { showNameOverlay(); scoreWasSaved = true; } }
                     break;
                 }
             }
@@ -716,6 +899,9 @@ function gameLoop() {
             ctx.fillRect(0, 0, W, H);
         }
 
+    } else if (gameState === 'naming') {
+        drawBackground();
+        for (const m of monsters) drawMonster(m);
     } else if (gameState === 'gameover') {
         drawBackground();
         for (const m of monsters) drawMonster(m);
