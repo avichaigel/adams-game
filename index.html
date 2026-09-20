@@ -117,7 +117,15 @@ const joystick = {
 // ---- TOUCH CONTROLS ----
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (gameState === 'gameover') { restartGame(); return; }
+    if (gameState === 'gameover') {
+        const rect = canvas.getBoundingClientRect();
+        const t0 = e.changedTouches[0];
+        const cx = t0.clientX - rect.left;
+        const cy = t0.clientY - rect.top;
+        if (hitBtn(gameOverBtns.menu, cx, cy)) { gameState = 'menu'; return; }
+        restartGame();
+        return;
+    }
     if (gameState === 'naming') { return; }
     if (gameState === 'menu' || gameState === 'menuScores') { handleMenuTouch(e.changedTouches[0]); return; }
     const t0 = e.changedTouches[0];
@@ -207,7 +215,8 @@ function spawnMonster() {
         health: lvl * 2 + 6,
         maxHealth: lvl * 2 + 6,
         wobble: Math.random() * Math.PI * 2,
-        color: `hsl(${120 + lvl * 20}, 80%, 45%)`
+        color: `hsl(${120 + lvl * 20}, 80%, 45%)`,
+        personality: Math.floor(Math.random() * 4)
     });
 }
 
@@ -732,9 +741,51 @@ function drawGameOver() {
         ctx.fillText('אין שיאים עדיין', W / 2, panelY + panelH * 0.5);
     }
 
+    // Two action buttons
+    const btnY = H * 0.845;
+    const btnH = H * 0.105;
+    const totalBtnW = W * 0.78;
+    const btnGap = W * 0.04;
+    const btnW = (totalBtnW - btnGap) / 2;
+    const btnX1 = (W - totalBtnW) / 2;
+    const btnX2 = btnX1 + btnW + btnGap;
+    const rb = 10;
+
+    function roundBtn(x, y, w, h) {
+        ctx.beginPath();
+        ctx.moveTo(x + rb, y);
+        ctx.lineTo(x + w - rb, y);
+        ctx.arcTo(x + w, y, x + w, y + rb, rb);
+        ctx.lineTo(x + w, y + h - rb);
+        ctx.arcTo(x + w, y + h, x + w - rb, y + h, rb);
+        ctx.lineTo(x + rb, y + h);
+        ctx.arcTo(x, y + h, x, y + h - rb, rb);
+        ctx.lineTo(x, y + rb);
+        ctx.arcTo(x, y, x + rb, y, rb);
+        ctx.closePath();
+    }
+
+    ctx.lineWidth = 2;
     ctx.font = `bold ${Math.floor(W * 0.052)}px Arial`;
-    ctx.fillStyle = '#ffdd00';
-    ctx.fillText('לחץ כדי לנסות שוב! | תפריט: M', W / 2, H * 0.9);
+
+    roundBtn(btnX1, btnY, btnW, btnH);
+    ctx.fillStyle = '#7700dd';
+    ctx.fill();
+    ctx.strokeStyle = '#cc77ff';
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🔄 נסה שוב', btnX1 + btnW / 2, btnY + btnH * 0.65);
+
+    roundBtn(btnX2, btnY, btnW, btnH);
+    ctx.fillStyle = '#005599';
+    ctx.fill();
+    ctx.strokeStyle = '#44aaff';
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🏠 תפריט', btnX2 + btnW / 2, btnY + btnH * 0.65);
+
+    gameOverBtns.retry = { x: btnX1, y: btnY, w: btnW, h: btnH };
+    gameOverBtns.menu  = { x: btnX2, y: btnY, w: btnW, h: btnH };
 }
 
 // ---- LEADERBOARD ----
@@ -755,6 +806,11 @@ function saveScore(s, name) {
 }
 
 let scoreWasSaved = false;
+let gameOverBtns = { retry: null, menu: null };
+
+function hitBtn(btn, x, y) {
+    return btn && x >= btn.x && x <= btn.x + btn.w && y >= btn.y && y <= btn.y + btn.h;
+}
 
 function showNameOverlay() {
     const overlay = document.getElementById('nameOverlay');
@@ -889,9 +945,40 @@ function gameLoop() {
             if (score > 150 && monsters.length < 10 && Math.random() < 0.3) spawnMonster();
         }
 
-        // Move monsters toward player
+        // Move monsters — each personality takes a different path (like Pac-Man ghosts)
         for (const m of monsters) {
-            const angle = Math.atan2(player.y - m.y, player.x - m.x);
+            let targetX = player.x;
+            let targetY = player.y;
+
+            if (m.personality === 1) {
+                // Ambusher: aims 100px ahead of where the player is heading
+                const len = Math.hypot(player.dx, player.dy);
+                if (len > 0.1) {
+                    targetX = player.x + (player.dx / len) * 100;
+                    targetY = player.y + (player.dy / len) * 100;
+                }
+            } else if (m.personality === 2) {
+                // Left flanker: targets a point 90px to the left of the player
+                const dx = player.x - m.x;
+                const dy = player.y - m.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 0.1) {
+                    targetX = player.x + (dy / dist) * 90;
+                    targetY = player.y - (dx / dist) * 90;
+                }
+            } else if (m.personality === 3) {
+                // Right flanker: targets a point 90px to the right of the player
+                const dx = player.x - m.x;
+                const dy = player.y - m.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 0.1) {
+                    targetX = player.x - (dy / dist) * 90;
+                    targetY = player.y + (dx / dist) * 90;
+                }
+            }
+            // personality 0 = direct chaser, targetX/Y already set to player position
+
+            const angle = Math.atan2(targetY - m.y, targetX - m.x);
             m.x += Math.cos(angle) * m.speed;
             m.y += Math.sin(angle) * m.speed;
         }
