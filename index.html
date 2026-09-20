@@ -74,6 +74,8 @@ let gamePaused = false;
 let score = 0;
 let frameCount = 0;
 let touchStartTime = 0, touchStartX = 0, touchStartY = 0;
+let nextLifeScore = 100;
+let lifeGainTimer = 0;
 
 // ---- PLAYER ----
 const player = {
@@ -786,6 +788,7 @@ function restartGame() {
     player.dx = 0; player.dy = 0;
     monsters = []; fireballs = []; particles = [];
     spawnTimer = 0; spawnRate = 110; shootCooldown = 0; shootHeld = false; shootTouchId = null;
+    nextLifeScore = 100; lifeGainTimer = 0;
     document.getElementById('health').textContent = '5';
     document.getElementById('score').textContent = '0';
 }
@@ -907,6 +910,13 @@ function gameLoop() {
                         monsters.splice(j, 1);
                         score += 10;
                         document.getElementById('score').textContent = score;
+                        if (score >= nextLifeScore) {
+                            nextLifeScore += 100;
+                            player.health++;
+                            document.getElementById('health').textContent = player.health;
+                            spawnParticles(player.x, player.y, '#ffdd00', 18);
+                            lifeGainTimer = 120;
+                        }
                     }
                     break;
                 }
@@ -949,6 +959,20 @@ function gameLoop() {
 
         drawJoystick();
         drawShootHint();
+
+        if (lifeGainTimer > 0) {
+            lifeGainTimer--;
+            const alpha = Math.min(1, lifeGainTimer / 30);
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.font = `bold ${Math.floor(W * 0.09)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#ffdd00';
+            ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 16;
+            ctx.fillText('+1 ❤️', W / 2, H * 0.28);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
 
         if (player.invincible > 0) {
             ctx.fillStyle = 'rgba(255,0,0,0.12)';
