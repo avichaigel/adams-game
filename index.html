@@ -97,6 +97,9 @@ let monsters = [];
 let spawnTimer = 0;
 let spawnRate = 110;
 
+// ---- PORTALS ----
+const PORTAL_HALF = 50; // half-size of each portal opening (total = 100px)
+
 // ---- PARTICLES ----
 let particles = [];
 
@@ -487,9 +490,45 @@ function drawBackground() {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     }
 
+    // Walls with portal gaps
     ctx.strokeStyle = '#8800ff';
     ctx.lineWidth = 3;
-    ctx.strokeRect(2, 2, W - 4, H - 4);
+    ctx.beginPath();
+    // Top wall (gap at center)
+    ctx.moveTo(2, 2); ctx.lineTo(W / 2 - PORTAL_HALF, 2);
+    ctx.moveTo(W / 2 + PORTAL_HALF, 2); ctx.lineTo(W - 2, 2);
+    // Bottom wall (gap at center)
+    ctx.moveTo(2, H - 2); ctx.lineTo(W / 2 - PORTAL_HALF, H - 2);
+    ctx.moveTo(W / 2 + PORTAL_HALF, H - 2); ctx.lineTo(W - 2, H - 2);
+    // Left wall (gap at center)
+    ctx.moveTo(2, 2); ctx.lineTo(2, H / 2 - PORTAL_HALF);
+    ctx.moveTo(2, H / 2 + PORTAL_HALF); ctx.lineTo(2, H - 2);
+    // Right wall (gap at center)
+    ctx.moveTo(W - 2, 2); ctx.lineTo(W - 2, H / 2 - PORTAL_HALF);
+    ctx.moveTo(W - 2, H / 2 + PORTAL_HALF); ctx.lineTo(W - 2, H - 2);
+    ctx.stroke();
+
+    // Portal glowing beams
+    const pulse = 0.55 + 0.45 * Math.sin(frameCount * 0.07);
+    ctx.lineWidth = 5;
+
+    // Left & Right portals — cyan
+    ctx.shadowColor = '#00ddff';
+    ctx.shadowBlur = 14;
+    ctx.strokeStyle = `rgba(0, 220, 255, ${pulse})`;
+    ctx.beginPath();
+    ctx.moveTo(2, H / 2 - PORTAL_HALF); ctx.lineTo(2, H / 2 + PORTAL_HALF);
+    ctx.moveTo(W - 2, H / 2 - PORTAL_HALF); ctx.lineTo(W - 2, H / 2 + PORTAL_HALF);
+    ctx.stroke();
+
+    // Top & Bottom portals — orange
+    ctx.shadowColor = '#ffaa00';
+    ctx.strokeStyle = `rgba(255, 170, 0, ${pulse})`;
+    ctx.beginPath();
+    ctx.moveTo(W / 2 - PORTAL_HALF, 2); ctx.lineTo(W / 2 + PORTAL_HALF, 2);
+    ctx.moveTo(W / 2 - PORTAL_HALF, H - 2); ctx.lineTo(W / 2 + PORTAL_HALF, H - 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
 }
 
 // ---- MENU SCREEN ----
@@ -803,9 +842,26 @@ function gameLoop() {
             if (keys['ArrowDown']  || keys['s']) player.dy =  player.speed;
         }
 
-        // Move player (stay inside canvas)
-        player.x = Math.max(player.r, Math.min(W - player.r, player.x + player.dx));
-        player.y = Math.max(player.r, Math.min(H - player.r, player.y + player.dy));
+        // Move player with Pac-Man portal wrapping
+        let nx = player.x + player.dx;
+        let ny = player.y + player.dy;
+
+        if (nx - player.r < 0) {
+            if (Math.abs(ny - H / 2) < PORTAL_HALF) nx = W - player.r - 1;
+            else nx = player.r;
+        } else if (nx + player.r > W) {
+            if (Math.abs(ny - H / 2) < PORTAL_HALF) nx = player.r + 1;
+            else nx = W - player.r;
+        }
+        if (ny - player.r < 0) {
+            if (Math.abs(nx - W / 2) < PORTAL_HALF) ny = H - player.r - 1;
+            else ny = player.r;
+        } else if (ny + player.r > H) {
+            if (Math.abs(nx - W / 2) < PORTAL_HALF) ny = player.r + 1;
+            else ny = H - player.r;
+        }
+        player.x = nx;
+        player.y = ny;
 
         // Manual shoot
         const wantsToShoot = shootHeld || keys[' '];
