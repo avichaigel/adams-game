@@ -76,9 +76,9 @@ const player = {
 // ---- FIREBALLS ----
 let fireballs = [];
 let shootCooldown = 0;
-let burstCount = 0;
-let burstTimer = 0;
-const SHOOT_RATE = 65;
+let shootHeld = false;
+let shootTouchId = null;
+const SHOOT_COOLDOWN = 15;
 
 // ---- MONSTERS ----
 let monsters = [];
@@ -114,6 +114,9 @@ canvas.addEventListener('touchstart', (e) => {
             joystick.touchX = joystick.baseX;
             joystick.touchY = joystick.baseY;
             joystick.touchId = touch.identifier;
+        } else if (shootTouchId === null && touch.identifier !== joystick.touchId) {
+            shootTouchId = touch.identifier;
+            shootHeld = true;
         }
     }
 }, { passive: false });
@@ -131,20 +134,21 @@ canvas.addEventListener('touchmove', (e) => {
 
 canvas.addEventListener('touchend', (e) => {
     e.preventDefault();
-    const t0 = e.changedTouches[0];
-    const duration = Date.now() - touchStartTime;
-    const moved = Math.hypot(t0.clientX - touchStartX, t0.clientY - touchStartY);
-    if (gameState === 'playing' && duration < 200 && moved < 15) {
-        gamePaused = !gamePaused;
-        joystick.active = false;
-        player.dx = 0; player.dy = 0;
-        return;
-    }
     for (const touch of e.changedTouches) {
         if (touch.identifier === joystick.touchId) {
+            const duration = Date.now() - touchStartTime;
+            const moved = Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY);
+            if (gameState === 'playing' && duration < 200 && moved < 15 && !shootHeld) {
+                gamePaused = !gamePaused;
+            }
             joystick.active = false;
             player.dx = 0;
             player.dy = 0;
+            joystick.touchId = null;
+        }
+        if (touch.identifier === shootTouchId) {
+            shootTouchId = null;
+            shootHeld = false;
         }
     }
 }, { passive: false });
@@ -154,9 +158,12 @@ const keys = {};
 document.addEventListener('keydown', e => {
     keys[e.key] = true;
     if (e.key === 'Escape' && gameState === 'playing') gamePaused = !gamePaused;
+    if (e.key === ' ') e.preventDefault();
 });
 document.addEventListener('keyup', e => keys[e.key] = false);
 canvas.addEventListener('click', () => { if (gameState === 'gameover') restartGame(); });
+canvas.addEventListener('mousedown', () => { if (gameState === 'playing' && !gamePaused) shootHeld = true; });
+canvas.addEventListener('mouseup', () => { shootHeld = false; });
 
 // ---- SPAWN MONSTER ----
 function spawnMonster() {
@@ -172,8 +179,8 @@ function spawnMonster() {
         x, y,
         r: 18 + lvl * 2.5,
         speed: 0.7 + lvl * 0.28,
-        health: lvl + 2,
-        maxHealth: lvl + 2,
+        health: lvl * 2 + 6,
+        maxHealth: lvl * 2 + 6,
         wobble: Math.random() * Math.PI * 2,
         color: `hsl(${120 + lvl * 20}, 80%, 45%)`
     });
@@ -401,6 +408,27 @@ function drawParticles() {
     }
 }
 
+// ---- DRAW SHOOT HINT (mobile) ----
+function drawShootHint() {
+    const bx = W - 60, by = H - 65, br = 42;
+    ctx.save();
+    ctx.globalAlpha = shootHeld ? 0.75 : 0.28;
+    ctx.fillStyle = '#ff6600';
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ffdd00';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.globalAlpha = shootHeld ? 1 : 0.55;
+    ctx.font = `${Math.floor(br * 0.9)}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔥', bx, by);
+    ctx.textBaseline = 'alphabetic';
+    ctx.restore();
+}
+
 // ---- DRAW JOYSTICK ----
 function drawJoystick() {
     if (!joystick.active) return;
@@ -461,34 +489,93 @@ function drawPause() {
 
 // ---- GAME OVER SCREEN ----
 function drawGameOver() {
-    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+    ctx.fillStyle = 'rgba(0,0,0,0.82)';
     ctx.fillRect(0, 0, W, H);
-
     ctx.textAlign = 'center';
 
     ctx.font = `bold ${Math.floor(W * 0.1)}px Arial`;
     ctx.fillStyle = '#ff4444';
-    ctx.fillText('💀 GAME OVER! 💀', W / 2, H * 0.38);
+    ctx.fillText('💀 GAME OVER! 💀', W / 2, H * 0.12);
 
     ctx.font = `${Math.floor(W * 0.065)}px Arial`;
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`ניקוד סופי: ${score}`, W / 2, H * 0.52);
+    ctx.fillText(`ניקוד סופי: ${score}`, W / 2, H * 0.22);
 
-    ctx.font = `bold ${Math.floor(W * 0.057)}px Arial`;
+    // Leaderboard panel
+    const panelW = W * 0.78;
+    const panelX = (W - panelW) / 2;
+    const panelY = H * 0.29;
+    const panelH = H * 0.52;
+    ctx.fillStyle = 'rgba(80,0,160,0.55)';
+    ctx.strokeStyle = '#aa44ff';
+    ctx.lineWidth = 2;
+    const r12 = 12;
+    ctx.beginPath();
+    ctx.moveTo(panelX + r12, panelY);
+    ctx.lineTo(panelX + panelW - r12, panelY);
+    ctx.arcTo(panelX + panelW, panelY, panelX + panelW, panelY + r12, r12);
+    ctx.lineTo(panelX + panelW, panelY + panelH - r12);
+    ctx.arcTo(panelX + panelW, panelY + panelH, panelX + panelW - r12, panelY + panelH, r12);
+    ctx.lineTo(panelX + r12, panelY + panelH);
+    ctx.arcTo(panelX, panelY + panelH, panelX, panelY + panelH - r12, r12);
+    ctx.lineTo(panelX, panelY + r12);
+    ctx.arcTo(panelX, panelY, panelX + r12, panelY, r12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = `bold ${Math.floor(W * 0.062)}px Arial`;
     ctx.fillStyle = '#ffdd00';
-    ctx.fillText('לחץ כדי לנסות שוב!', W / 2, H * 0.67);
+    ctx.fillText('🏆 טבלת שיאים', W / 2, panelY + panelH * 0.13);
+
+    const lb = loadLeaderboard();
+    const medals = ['🥇', '🥈', '🥉', '4.', '5.'];
+    const entryH = panelH * 0.155;
+    for (let i = 0; i < Math.min(lb.length, 5); i++) {
+        const ey = panelY + panelH * 0.24 + i * entryH;
+        const isMe = (lb[i] === score && !lb.slice(0, i).includes(score));
+        ctx.font = `${isMe ? 'bold ' : ''}${Math.floor(W * 0.053)}px Arial`;
+        ctx.fillStyle = isMe ? '#00ffcc' : '#ddccff';
+        ctx.fillText(`${medals[i]}  ${lb[i]}`, W / 2, ey);
+    }
+    if (lb.length === 0) {
+        ctx.font = `${Math.floor(W * 0.05)}px Arial`;
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText('אין שיאים עדיין', W / 2, panelY + panelH * 0.5);
+    }
+
+    ctx.font = `bold ${Math.floor(W * 0.052)}px Arial`;
+    ctx.fillStyle = '#ffdd00';
+    ctx.fillText('לחץ כדי לנסות שוב!', W / 2, H * 0.9);
 }
+
+// ---- LEADERBOARD ----
+function loadLeaderboard() {
+    try { return JSON.parse(localStorage.getItem('leaderboard') || '[]'); }
+    catch { return []; }
+}
+
+function saveScore(s) {
+    const lb = loadLeaderboard();
+    lb.push(s);
+    lb.sort((a, b) => b - a);
+    lb.splice(5);
+    localStorage.setItem('leaderboard', JSON.stringify(lb));
+}
+
+let scoreWasSaved = false;
 
 // ---- RESTART ----
 function restartGame() {
     gameState = 'playing';
     gamePaused = false;
     score = 0;
+    scoreWasSaved = false;
     player.x = W / 2; player.y = H / 2;
     player.health = 5; player.invincible = 0;
     player.dx = 0; player.dy = 0;
     monsters = []; fireballs = []; particles = [];
-    spawnTimer = 0; spawnRate = 110; shootCooldown = 0; burstCount = 0; burstTimer = 0;
+    spawnTimer = 0; spawnRate = 110; shootCooldown = 0; shootHeld = false; shootTouchId = null;
     document.getElementById('health').textContent = '5';
     document.getElementById('score').textContent = '0';
 }
@@ -537,20 +624,12 @@ function gameLoop() {
         player.x = Math.max(player.r, Math.min(W - player.r, player.x + player.dx));
         player.y = Math.max(player.r, Math.min(H - player.r, player.y + player.dy));
 
-        // Auto shoot at nearest monster
-        if (burstCount > 0) {
-            burstTimer--;
-            if (burstTimer <= 0 && monsters.length > 0) {
-                shoot();
-                burstCount--;
-                burstTimer = 10;
-            }
-        }
-        shootCooldown--;
-        if (shootCooldown <= 0 && monsters.length > 0 && burstCount === 0) {
-            burstCount = 3;
-            burstTimer = 0;
-            shootCooldown = SHOOT_RATE;
+        // Manual shoot
+        const wantsToShoot = shootHeld || keys[' '];
+        if (shootCooldown > 0) shootCooldown--;
+        if (wantsToShoot && shootCooldown <= 0 && monsters.length > 0) {
+            shoot();
+            shootCooldown = SHOOT_COOLDOWN;
         }
 
         // Update fireballs
@@ -602,7 +681,7 @@ function gameLoop() {
                     player.health--;
                     player.invincible = 65;
                     document.getElementById('health').textContent = player.health;
-                    if (player.health <= 0) gameState = 'gameover';
+                    if (player.health <= 0) { gameState = 'gameover'; if (!scoreWasSaved) { saveScore(score); scoreWasSaved = true; } }
                     break;
                 }
             }
@@ -630,6 +709,7 @@ function gameLoop() {
         }
 
         drawJoystick();
+        drawShootHint();
 
         if (player.invincible > 0) {
             ctx.fillStyle = 'rgba(255,0,0,0.12)';
